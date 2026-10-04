@@ -15,6 +15,7 @@ while (true)
         Console.WriteLine("\n1 - Carregar" +
                           "\n2 - Descarregar" +
                           "\n3 - Consultar estoque" +
+                          "\n4 - Saque" +
                           "\n0 - Sair");
 
         Console.Write("Opção: ");
@@ -39,16 +40,24 @@ while (true)
             continue;
         }
 
-        if (opcao is not ("1" or "2" ))
+        if (opcao is not ("1" or "2" or "4" ))
         {
             Console.WriteLine("Opção inválida. Digite 1, 2, 3 ou 0.");
+            continue;
+        }
+
+        if(opcao == "4")
+        {
+            Console.WriteLine("Digite o valor que deseja sacar");
+            string? valorSaque = Console.ReadLine()?.Trim();
+            inventario.Saque(Convert.ToDecimal(valorSaque));
             continue;
         }
 
         bool carregar = opcao == "1";
         Console.WriteLine(carregar ? "\nCARREGAR DINHEIRO" : "\nDESCARREGAR DINHEIRO");
         Console.WriteLine("Valores aceitos (R$): 1;");
-        Console.WriteLine("2; 5; 10; 20; 50; 100; 200.");
+        Console.WriteLine("1,2; 5; 10; 20; 50; 100; 200.");
         Console.WriteLine("Digite 0 para cancelar e voltar ao menu.");
 
         decimal valor;
