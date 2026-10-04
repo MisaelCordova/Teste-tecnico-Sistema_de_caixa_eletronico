@@ -79,6 +79,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             if (composicao == null)
             {
                 Console.WriteLine("O caixa possui saldo suficiente, mas não é possível compor o valor com as cédulas disponíveis.");
+                ExibirSugestaoSaque(valorSaque);
                 return;
             }
 
@@ -103,6 +104,30 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             Console.WriteLine($"Total de notas: {composicao.Values.Sum()}");
         }
 
+        private void ExibirSugestaoSaque(decimal valorSaque)
+        {
+            var sugestao = ComporNotas(
+                valorSaque, _cedulas, EstrategiaSaque.PreservarMaioresValores,
+                permitirValorMenor: true);
+
+            if (sugestao == null)
+            {
+                Console.WriteLine("Não há um valor menor disponível para sugerir.");
+                return;
+            }
+
+            var cultura = CultureInfo.GetCultureInfo("pt-BR");
+            decimal valorSugerido = sugestao.Sum(nota => (decimal)nota.Key * nota.Value);
+
+            Console.WriteLine($"Sugestão: sacar {valorSugerido.ToString("C2", cultura)} com:");
+            foreach (var (valor, quantidade) in sugestao)
+            {
+                Console.WriteLine($"{quantidade} nota(s) de {valor.ToString("C2", cultura)}");
+            }
+
+            Console.WriteLine("Para sacar esse valor, faça uma nova solicitação.");
+        }
+
         private bool ValidarSaque(decimal valorSaque)
         {
             if (valorSaque <= 0 || decimal.Truncate(valorSaque) != valorSaque)
@@ -118,7 +143,9 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         }
        
 
-        private Dictionary<long, long>? ComporNotas(decimal valor, List<CedulaMoeda> cedulas, EstrategiaSaque estrategia) 
+        private Dictionary<long, long>? ComporNotas(
+            decimal valor, List<CedulaMoeda> cedulas, EstrategiaSaque estrategia,
+            bool permitirValorMenor = false)
         {
             ArgumentNullException.ThrowIfNull(cedulas);
 
@@ -176,7 +203,17 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                 }
             }
     
-            return combinacoes[valorSaque];
+            if (combinacoes[valorSaque] != null || !permitirValorMenor)
+                return combinacoes[valorSaque];
+
+            // As combinações já foram calculadas. Procuramos a maior abaixo do saque.
+            for (long valorMenor = valorSaque - 1; valorMenor > 0; valorMenor--)
+            {
+                if (combinacoes[valorMenor] != null)
+                    return combinacoes[valorMenor];
+            }
+
+            return null;
         }
     }
 }
