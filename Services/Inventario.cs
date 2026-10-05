@@ -11,7 +11,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
     public class Inventario
     {
         private readonly List<CedulaMoeda> _cedulas = new();
-        private readonly INotificacao _notificacao;
+        private readonly List<INotificacao> _notificacoes = new();
 
         public IEstrategiaSaque Estrategia { get; private set; }
         private static readonly CultureInfo _cultura = CultureInfo.GetCultureInfo("pt-BR");
@@ -19,20 +19,28 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
         public Inventario(INotificacao? notificacao = null, IEstrategiaSaque? estrategia = null)
         {
-            _notificacao = notificacao ?? new Notificacao("operacoes.txt");
+            AdicionarNotificacao(notificacao ?? new Notificacao("operacoes.txt"));
             Estrategia = estrategia ?? new MenorQuantidade();
+        }
+
+        public void AdicionarNotificacao(INotificacao notificacao)
+        {
+            ArgumentNullException.ThrowIfNull(notificacao);
+            _notificacoes.Add(notificacao);
         }
 
         private void RegistrarOperacao(string mensagem)
         {
-            try
+            foreach (var notificacao in _notificacoes)
             {
-                _notificacao.Registrar(mensagem);
-            }
-            catch (Exception erro) when (erro is IOException or UnauthorizedAccessException)
-            {
-            
-                Console.Error.WriteLine($"Aviso: não foi possível registrar a operação no arquivo: {erro.Message}");
+                try
+                {
+                    notificacao.Registrar(mensagem);
+                }
+                catch (Exception erro) when (erro is IOException or UnauthorizedAccessException)
+                {
+                    Console.Error.WriteLine($"Aviso: não foi possível registrar a operação: {erro.Message}");
+                }
             }
         }
         public decimal ValorTotal => _cedulas.Sum(c => c.ValorTotal);
