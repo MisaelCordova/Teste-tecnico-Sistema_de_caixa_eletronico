@@ -11,6 +11,8 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
     {
         private readonly List<CedulaMoeda> _cedulas = new();
         private readonly INotificacao _notificacao;
+
+        public EstrategiaSaque Estrategia { get; private set; } = EstrategiaSaque.MenorQuantidade;
         private static readonly CultureInfo _cultura = CultureInfo.GetCultureInfo("pt-BR");
 
 
@@ -79,6 +81,14 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             RegistrarOperacao($"Descarga: {quantidade} unidade(s) de {valor.ToString("C2", _cultura)}; total: {(valor * quantidade).ToString("C2", _cultura)}; saldo: {ValorTotal.ToString("C2", _cultura)}.");
         }
 
+        public void TrocarEstrategia(EstrategiaSaque estrategia)
+        {
+            if (!Enum.IsDefined(estrategia))
+                throw new ArgumentOutOfRangeException(nameof(estrategia), "Estratégia de saque inválida.");
+
+            Estrategia = estrategia;
+        }
+
         public ResumoEstoque[] Consultar()
         {
             var resumo = _cedulas.Select(c => new ResumoEstoque
@@ -98,7 +108,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                       "A quantidade deve ser positiva.");
         }
             
-        public void Saque(Conta conta, decimal valorSaque, EstrategiaSaque estrategia)
+        public void Saque(Conta conta, decimal valorSaque)
         {
             ArgumentNullException.ThrowIfNull(conta);
             ValidarValorSaque(valorSaque);
@@ -113,7 +123,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                 return;
 
             var composicao = ComporNotas(
-                valorSaque, _cedulas, estrategia);
+                valorSaque, _cedulas);
 
             if (composicao == null)
             {
@@ -140,7 +150,6 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         private static void ExibirResumoSaque(Dictionary<long, long> composicao)
         {
          
-
             Console.WriteLine("Saque efetuado com sucesso com:");
             foreach (var (valor, quantidade) in composicao)
             {
@@ -153,7 +162,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         private void ExibirSugestaoSaque(decimal valorSaque)
         {
             var sugestao = ComporNotas(
-                valorSaque, _cedulas, EstrategiaSaque.PreservarMaioresValores,
+                valorSaque, _cedulas,
                 permitirValorMenor: true);
 
             if (sugestao == null)
@@ -193,7 +202,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
        
 
         private Dictionary<long, long>? ComporNotas(
-            decimal valor, List<CedulaMoeda> cedulas, EstrategiaSaque estrategia,
+            decimal valor, List<CedulaMoeda> cedulas,
             bool permitirValorMenor = false)
         {
             ArgumentNullException.ThrowIfNull(cedulas);
@@ -207,7 +216,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
             foreach(var cedula in cedulas.OrderBy(c => c.Valor))
             {
-                long valorNota = checked((long)(cedula.Valor));
+                long valorNota = checked((long)cedula.Valor);
 
                 for (long valorAtual = valorSaque; valorAtual >= 0; valorAtual--) 
                 {
@@ -230,7 +239,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                             guardarCombinacao = true; // é a primeira solução para esse valor
 
                         } 
-                        else if (estrategia == EstrategiaSaque.PreservarMaioresValores)
+                        else if (Estrategia == EstrategiaSaque.PreservarMaioresValores)
                         {
                             guardarCombinacao = false; // a solução anterior usa menos notas maior valor
                         }

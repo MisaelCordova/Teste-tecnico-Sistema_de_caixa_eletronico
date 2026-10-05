@@ -21,6 +21,7 @@ while (true)
 
         var conta = cadastroContas.Autenticar(idConta);
         Console.WriteLine($"Conta: {conta.Id} | Saldo: {conta.Saldo.ToString("C2", cultura)}");
+        Console.WriteLine($"Estratégia atual: {NomeEstrategia(inventario.Estrategia)}");
 
         Console.WriteLine("\n1 - Carregar" +
                           "\n2 - Descarregar" +
@@ -28,6 +29,7 @@ while (true)
                           "\n4 - Saque" +
                           "\n5 - Cadastrar conta" +
                           "\n6 - Consultar saldo da conta" +
+                          "\n7 - Trocar estratégia de saque" +
                           "\n0 - Sair");
 
         Console.Write("Opção: ");
@@ -64,9 +66,15 @@ while (true)
             continue;
         }
 
+        if (opcao == "7")
+        {
+            if (!TrocarEstrategia()) break;
+            continue;
+        }
+
         if (opcao is not ("1" or "2" or "4" ))
         {
-            Console.WriteLine("Opção inválida. Digite uma opção de 0 a 6.");
+            Console.WriteLine("Opção inválida. Digite uma opção de 0 a 7.");
             continue;
         }
 
@@ -76,7 +84,7 @@ while (true)
             string? valorSaque = Console.ReadLine()?.Trim();
             if (!decimal.TryParse(valorSaque?.Replace('.', ','), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, cultura, out var valorSolicitado))
                 throw new FormatException("Valor de saque inválido.");
-            inventario.Saque(conta, valorSolicitado, EstrategiaSaque.PreservarMaioresValores);
+            inventario.Saque(conta, valorSolicitado);
             continue;
         }
 
@@ -152,6 +160,43 @@ while (true)
     {
         Console.WriteLine($"Operação rejeitada: {ex.Message}");
 
+    }
+}
+
+string NomeEstrategia(EstrategiaSaque estrategia)
+{
+    return estrategia == EstrategiaSaque.MenorQuantidade
+        ? "Menor quantidade de notas"
+        : "Preservar notas de maior valor";
+}
+
+bool TrocarEstrategia()
+{
+    Console.WriteLine($"Estratégia atual: {NomeEstrategia(inventario.Estrategia)}");
+    Console.WriteLine("1 - Menor quantidade de notas");
+    Console.WriteLine("2 - Preservar notas de maior valor");
+    Console.WriteLine("0 - Cancelar");
+
+    while (true)
+    {
+        Console.Write("Escolha a estratégia: ");
+        string? escolha = Console.ReadLine()?.Trim();
+        if (escolha is null) return false;
+        if (escolha == "0") return true;
+
+        if (escolha is not ("1" or "2"))
+        {
+            Console.WriteLine("Opção inválida. Digite 1, 2 ou 0.");
+            continue;
+        }
+
+        var estrategia = escolha == "1"
+            ? EstrategiaSaque.MenorQuantidade
+            : EstrategiaSaque.PreservarMaioresValores;
+
+        inventario.TrocarEstrategia(estrategia);
+        Console.WriteLine($"Estratégia definida: {NomeEstrategia(inventario.Estrategia)}");
+        return true;
     }
 }
 
