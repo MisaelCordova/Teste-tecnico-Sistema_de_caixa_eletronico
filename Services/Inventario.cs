@@ -10,7 +10,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 {
     public class Inventario
     {
-        private readonly List<CedulaMoeda> _cedulas = new();
+        private readonly Dictionary<decimal, CedulaMoeda> _cedulas = new();
         private readonly List<INotificacao> _notificacoes = new();
 
         public IEstrategiaSaque Estrategia { get; private set; }
@@ -43,18 +43,16 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                 }
             }
         }
-        public decimal ValorTotal => _cedulas.Sum(c => c.ValorTotal);
+        public decimal ValorTotal => _cedulas.Values.Sum(c => c.ValorTotal);
 
 
         public void Carregar(decimal valor, long quantidade)
         {
             ValidarQuantidade(quantidade);
 
-            var cedula = _cedulas.FirstOrDefault(c => c.Valor == valor);
-
-            if (cedula == null)
+            if (!_cedulas.TryGetValue(valor, out var cedula))
             {
-                _cedulas.Add(new CedulaMoeda
+                _cedulas.Add(valor, new CedulaMoeda
                 {
                     Valor = valor,
                     Quantidade = quantidade
@@ -71,9 +69,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         {
             ValidarQuantidade(quantidade);
 
-            var cedula = _cedulas.FirstOrDefault(c => c.Valor == valor);
-
-            if (cedula == null)
+            if (!_cedulas.TryGetValue(valor, out var cedula))
                 throw new InvalidOperationException(
                     "Essa cedula/moeda não existe no caixa.");
 
@@ -85,7 +81,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
             if (cedula.Quantidade == 0)
             {
-                _cedulas.Remove(cedula);
+                _cedulas.Remove(valor);
             }
 
             RegistrarOperacao($"Descarga: {quantidade} unidade(s) de {valor.ToString("C2", _cultura)}; total: {(valor * quantidade).ToString("C2", _cultura)}; saldo: {ValorTotal.ToString("C2", _cultura)}.");
@@ -100,7 +96,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
         public ResumoEstoque[] Consultar()
         {
-            var resumo = _cedulas.Select(c => new ResumoEstoque
+            var resumo = _cedulas.Values.Select(c => new ResumoEstoque
             {
                 Cedula = c.Valor,
                 Quantidade = c.Quantidade,
@@ -132,7 +128,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                 return;
 
             var composicao = Estrategia.ComporNotas(
-                valorSaque, _cedulas);
+                valorSaque, _cedulas.Values);
 
             if (composicao == null)
             {
@@ -171,7 +167,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         private void ExibirSugestaoSaque(decimal valorSaque)
         {
             var sugestao = Estrategia.ComporNotas(
-                valorSaque, _cedulas,
+                valorSaque, _cedulas.Values,
                 permitirValorMenor: true);
 
             if (sugestao == null)

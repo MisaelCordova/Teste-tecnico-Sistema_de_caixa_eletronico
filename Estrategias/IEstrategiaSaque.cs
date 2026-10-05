@@ -7,7 +7,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias
         string Nome { get; }
 
         Dictionary<long, long>? ComporNotas(
-            decimal valor, List<CedulaMoeda> cedulas,
+            decimal valor, IEnumerable<CedulaMoeda> cedulas,
             bool permitirValorMenor = false);
     }
 }

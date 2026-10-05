@@ -9,7 +9,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias
         protected abstract bool DeveSubstituir(long novaQuantidade, long quantidadeAnterior);
 
         public Dictionary<long, long>? ComporNotas(
-            decimal valor, List<CedulaMoeda> cedulas,
+            decimal valor, IEnumerable<CedulaMoeda> cedulas,
             bool permitirValorMenor = false)
         {
             ArgumentNullException.ThrowIfNull(cedulas);
