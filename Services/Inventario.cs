@@ -27,7 +27,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             }
             catch (Exception erro) when (erro is IOException or UnauthorizedAccessException)
             {
-                // A operação já aconteceu; falha no registro não deve sugerir repeti-la.
+            
                 Console.Error.WriteLine($"Aviso: não foi possível registrar a operação no arquivo: {erro.Message}");
             }
         }
@@ -122,7 +122,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                 return;
             }
 
-            // Só debitamos depois de confirmar que o caixa consegue entregar o valor.
+           
             conta.Debitar(valorSaque);
             foreach (var (valor, quantidade) in composicao)
             {
