@@ -92,7 +92,7 @@ while (true)
         bool carregar = opcao == "1";
         Console.WriteLine(carregar ? "\nCARREGAR DINHEIRO" : "\nDESCARREGAR DINHEIRO");
         Console.WriteLine("Valores aceitos (R$): 1;");
-        Console.WriteLine("1,2; 5; 10; 20; 50; 100; 200.");
+        Console.WriteLine("2; 5; 10; 20; 50; 100; 200.");
         Console.WriteLine("Digite 0 para cancelar e voltar ao menu.");
 
         decimal valor;

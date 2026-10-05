@@ -14,8 +14,12 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias
         {
             ArgumentNullException.ThrowIfNull(cedulas);
 
-            long valorSaque = checked((long) valor);
-            long tamanho = valorSaque + 1;
+            decimal centavos = valor * 100m;
+            if (valor <= 0 || centavos != decimal.Truncate(centavos))
+                throw new ArgumentOutOfRangeException(nameof(valor), "O saque deve ser positivo e não pode conter frações de centavo.");
+
+            long valorSaque = checked((long)centavos);
+            long tamanho = checked(valorSaque + 1);
             var combinacoes = new Dictionary<long, long>?[tamanho];
             long[] totalNotas = new long[tamanho];
 
@@ -23,7 +27,10 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias
 
             foreach(var cedula in cedulas.OrderBy(c => c.Valor))
             {
-                long valorNota = checked((long)cedula.Valor);
+                decimal centavosNota = cedula.Valor * 100m;
+                if (centavosNota <= 0 || centavosNota != decimal.Truncate(centavosNota) || cedula.Quantidade < 0)
+                    throw new ArgumentException("O estoque contém valor ou quantidade inválida.", nameof(cedulas));
+                long valorNota = checked((long)centavosNota);
 
                 for (long valorAtual = valorSaque; valorAtual >= 0; valorAtual--) 
                 {
@@ -36,7 +43,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias
 
                     for(long quantidade = 1; quantidade <= quantidadeMaxima; quantidade++)
                     {
-                        long novoValor = valorAtual + valorNota * quantidade; ;
+                        long novoValor = valorAtual + valorNota * quantidade;
                         long novaQuantidadeNotas = totalNotas[valorAtual] + quantidade;
 
                         bool guardarCombinacao = combinacoes[novoValor] == null ||

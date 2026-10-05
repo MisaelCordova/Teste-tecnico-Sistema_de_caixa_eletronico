@@ -141,11 +141,11 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             conta.Debitar(valorSaque);
             foreach (var (valor, quantidade) in composicao)
             {
-                Descarregar(valor, quantidade);
+                Descarregar(valor / 100m, quantidade);
             }
 
             var notas = string.Join(", ", composicao.Select(nota =>
-                $"{nota.Value} unidade(s) de {nota.Key.ToString("C2", _cultura)}"));
+                $"{nota.Value} unidade(s) de {(nota.Key / 100m).ToString("C2", _cultura)}"));
 
             RegistrarOperacao($"Conta: {conta.Id}; saque: {valorSaque.ToString("C2", _cultura)}; notas: {notas}; total de notas: {composicao.Values.Sum()}; saldo do caixa: {ValorTotal.ToString("C2", _cultura)}; saldo da conta: {conta.Saldo.ToString("C2", _cultura)}.");
             ExibirResumoSaque(composicao);
@@ -158,7 +158,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             Console.WriteLine("Saque efetuado com sucesso com:");
             foreach (var (valor, quantidade) in composicao)
             {
-                Console.WriteLine($"{quantidade} nota(s) de {valor.ToString("C2", _cultura)}");
+                Console.WriteLine($"{quantidade} cédula(s)/moeda(s) de {(valor / 100m).ToString("C2", _cultura)}");
             }
 
             Console.WriteLine($"Total de notas: {composicao.Values.Sum()}");
@@ -177,12 +177,12 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             }
 
             var cultura = CultureInfo.GetCultureInfo("pt-BR");
-            decimal valorSugerido = sugestao.Sum(nota => (decimal)nota.Key * nota.Value);
+            decimal valorSugerido = sugestao.Sum(nota => (nota.Key / 100m) * nota.Value);
 
             Console.WriteLine($"Sugestão: sacar {valorSugerido.ToString("C2", cultura)} com:");
             foreach (var (valor, quantidade) in sugestao)
             {
-                Console.WriteLine($"{quantidade} nota(s) de {valor.ToString("C2", cultura)}");
+                Console.WriteLine($"{quantidade} cédula(s)/moeda(s) de {(valor / 100m).ToString("C2", cultura)}");
             }
 
             Console.WriteLine("Para sacar esse valor, faça uma nova solicitação.");
@@ -190,8 +190,9 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
         private static void ValidarValorSaque(decimal valorSaque)
         {
-            if (valorSaque <= 0 || decimal.Truncate(valorSaque) != valorSaque)
-                throw new ArgumentOutOfRangeException(nameof(valorSaque), "O saque deve ser positivo e inteiro, pois o caixa não possui moedas de centavos.");
+            decimal centavos = valorSaque * 100m;
+            if (valorSaque <= 0 || decimal.Truncate(centavos) != centavos)
+                throw new ArgumentOutOfRangeException(nameof(valorSaque), "O saque deve ser positivo e não pode conter frações de centavo.");
         }
 
         private bool ValidarSaque(decimal valorSaque)
