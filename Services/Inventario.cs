@@ -98,13 +98,22 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                       "A quantidade deve ser positiva.");
         }
             
-        public void Saque(decimal valorSaque)
+        public void Saque(Conta conta, decimal valorSaque, EstrategiaSaque estrategia)
         {
+            ArgumentNullException.ThrowIfNull(conta);
+            ValidarValorSaque(valorSaque);
+
+            if (valorSaque > conta.Saldo)
+            {
+                Console.WriteLine("Saldo insuficiente na conta.");
+                return;
+            }
+
             if (!ValidarSaque(valorSaque))
                 return;
 
             var composicao = ComporNotas(
-                valorSaque, _cedulas, EstrategiaSaque.PreservarMaioresValores);
+                valorSaque, _cedulas, estrategia);
 
             if (composicao == null)
             {
@@ -113,6 +122,8 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
                 return;
             }
 
+            // Só debitamos depois de confirmar que o caixa consegue entregar o valor.
+            conta.Debitar(valorSaque);
             foreach (var (valor, quantidade) in composicao)
             {
                 Descarregar(valor, quantidade);
@@ -121,8 +132,9 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             var notas = string.Join(", ", composicao.Select(nota =>
                 $"{nota.Value} unidade(s) de {nota.Key.ToString("C2", _cultura)}"));
 
-            RegistrarOperacao($"Saque: {valorSaque.ToString("C2", _cultura)}; notas: {notas}; total de notas: {composicao.Values.Sum()}; saldo: {ValorTotal.ToString("C2", _cultura)}.");
+            RegistrarOperacao($"Conta: {conta.Id}; saque: {valorSaque.ToString("C2", _cultura)}; notas: {notas}; total de notas: {composicao.Values.Sum()}; saldo do caixa: {ValorTotal.ToString("C2", _cultura)}; saldo da conta: {conta.Saldo.ToString("C2", _cultura)}.");
             ExibirResumoSaque(composicao);
+            Console.WriteLine($"Saldo da conta: {conta.Saldo.ToString("C2", _cultura)}");
         }
 
         private static void ExibirResumoSaque(Dictionary<long, long> composicao)
@@ -162,11 +174,14 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             Console.WriteLine("Para sacar esse valor, faça uma nova solicitação.");
         }
 
-        private bool ValidarSaque(decimal valorSaque)
+        private static void ValidarValorSaque(decimal valorSaque)
         {
             if (valorSaque <= 0 || decimal.Truncate(valorSaque) != valorSaque)
                 throw new ArgumentOutOfRangeException(nameof(valorSaque), "O saque deve ser positivo e inteiro, pois o caixa não possui moedas de centavos.");
+        }
 
+        private bool ValidarSaque(decimal valorSaque)
+        {
             if (valorSaque > ValorTotal)
             {
                 Console.WriteLine("Saldo do caixa insuficiente");

@@ -6,16 +6,28 @@ using Teste_tecnico_Sistema_de_caixa_eletronico.Services;
 Console.OutputEncoding = Encoding.UTF8;
 var cultura = CultureInfo.GetCultureInfo("pt-BR");
 var inventario = new Inventario();
+var cadastroContas = new CadastroContas();
 Console.WriteLine("Caixa eletrônico — gestão de inventário");
+Console.WriteLine("Cadastre a primeira conta para começar.");
+if (!CadastrarConta()) return;
 
 while (true)
 {
     try
     {
+        Console.Write("\nID da conta (0 para sair): ");
+        string? idConta = Console.ReadLine()?.Trim();
+        if (idConta is null or "0") break;
+
+        var conta = cadastroContas.Autenticar(idConta);
+        Console.WriteLine($"Conta: {conta.Id} | Saldo: {conta.Saldo.ToString("C2", cultura)}");
+
         Console.WriteLine("\n1 - Carregar" +
                           "\n2 - Descarregar" +
                           "\n3 - Consultar estoque" +
                           "\n4 - Saque" +
+                          "\n5 - Cadastrar conta" +
+                          "\n6 - Consultar saldo da conta" +
                           "\n0 - Sair");
 
         Console.Write("Opção: ");
@@ -40,9 +52,21 @@ while (true)
             continue;
         }
 
+        if (opcao == "5")
+        {
+            if (!CadastrarConta()) break;
+            continue;
+        }
+
+        if (opcao == "6")
+        {
+            Console.WriteLine($"Saldo da conta {conta.Id}: {conta.Saldo.ToString("C2", cultura)}");
+            continue;
+        }
+
         if (opcao is not ("1" or "2" or "4" ))
         {
-            Console.WriteLine("Opção inválida. Digite 1, 2, 3 ou 0.");
+            Console.WriteLine("Opção inválida. Digite uma opção de 0 a 6.");
             continue;
         }
 
@@ -50,7 +74,9 @@ while (true)
         {
             Console.WriteLine("Digite o valor que deseja sacar");
             string? valorSaque = Console.ReadLine()?.Trim();
-            inventario.Saque(Convert.ToDecimal(valorSaque));
+            if (!decimal.TryParse(valorSaque?.Replace('.', ','), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, cultura, out var valorSolicitado))
+                throw new FormatException("Valor de saque inválido.");
+            inventario.Saque(conta, valorSolicitado, EstrategiaSaque.PreservarMaioresValores);
             continue;
         }
 
@@ -68,7 +94,7 @@ while (true)
             if (entrada is null) return;
 
             if (!decimal.TryParse(entrada.Trim().Replace('.', ','),
-                NumberStyles.AllowDecimalPoint, CultureInfo.CurrentCulture, out valor))
+                NumberStyles.AllowDecimalPoint, cultura, out valor))
             {
                 Console.WriteLine("Valor inválido. Digite apenas o número, sem R$.");
                 continue;
@@ -126,5 +152,40 @@ while (true)
     {
         Console.WriteLine($"Operação rejeitada: {ex.Message}");
 
+    }
+}
+
+bool CadastrarConta()
+{
+    while (true)
+    {
+        Console.Write("ID da nova conta: ");
+        string? id = Console.ReadLine()?.Trim();
+        if (id is null) return false;
+        if (string.IsNullOrWhiteSpace(id) || id == "0")
+        {
+            Console.WriteLine("Informe um ID não vazio e diferente de 0.");
+            continue;
+        }
+
+        Console.Write("Saldo inicial (ex.: 100,50): ");
+        string? entrada = Console.ReadLine()?.Trim();
+        if (entrada is null) return false;
+        if (!decimal.TryParse(entrada.Replace('.', ','), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, cultura, out var saldo))
+        {
+            Console.WriteLine("Saldo inicial inválido.");
+            continue;
+        }
+
+        try
+        {
+            cadastroContas.Registrar(new Conta(id, saldo));
+            Console.WriteLine($"Conta {id} cadastrada com saldo de {saldo.ToString("C2", cultura)}.");
+            return true;
+        }
+        catch (Exception erro) when (erro is ArgumentException or InvalidOperationException)
+        {
+            Console.WriteLine(erro.Message);
+        }
     }
 }
