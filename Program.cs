@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text;
+using Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias;
 using Teste_tecnico_Sistema_de_caixa_eletronico.Models;
 using Teste_tecnico_Sistema_de_caixa_eletronico.Services;
 
@@ -163,11 +164,9 @@ while (true)
     }
 }
 
-string NomeEstrategia(EstrategiaSaque estrategia)
+string NomeEstrategia(IEstrategiaSaque estrategia)
 {
-    return estrategia == EstrategiaSaque.MenorQuantidade
-        ? "Menor quantidade de notas"
-        : "Preservar notas de maior valor";
+    return estrategia.Nome;
 }
 
 bool TrocarEstrategia()
@@ -190,9 +189,9 @@ bool TrocarEstrategia()
             continue;
         }
 
-        var estrategia = escolha == "1"
-            ? EstrategiaSaque.MenorQuantidade
-            : EstrategiaSaque.PreservarMaioresValores;
+        IEstrategiaSaque estrategia = escolha == "1"
+            ? new MenorQuantidade()
+            : new PreservarMaioresValores();
 
         inventario.TrocarEstrategia(estrategia);
         Console.WriteLine($"Estratégia definida: {NomeEstrategia(inventario.Estrategia)}");

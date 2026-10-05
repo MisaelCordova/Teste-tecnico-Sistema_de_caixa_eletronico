@@ -38,9 +38,4 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Models
         public decimal ValorTotal { get; set; }
     }
 
-    public enum EstrategiaSaque
-    {
-        MenorQuantidade,
-        PreservarMaioresValores
-    }
 }

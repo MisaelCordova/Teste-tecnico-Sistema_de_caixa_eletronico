@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Teste_tecnico_Sistema_de_caixa_eletronico.Estrategias;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -12,13 +13,14 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         private readonly List<CedulaMoeda> _cedulas = new();
         private readonly INotificacao _notificacao;
 
-        public EstrategiaSaque Estrategia { get; private set; } = EstrategiaSaque.MenorQuantidade;
+        public IEstrategiaSaque Estrategia { get; private set; }
         private static readonly CultureInfo _cultura = CultureInfo.GetCultureInfo("pt-BR");
 
 
-        public Inventario(INotificacao? notificacao= null)
+        public Inventario(INotificacao? notificacao = null, IEstrategiaSaque? estrategia = null)
         {
             _notificacao = notificacao ?? new Notificacao("operacoes.txt");
+            Estrategia = estrategia ?? new MenorQuantidade();
         }
 
         private void RegistrarOperacao(string mensagem)
@@ -65,7 +67,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
             if (cedula == null)
                 throw new InvalidOperationException(
-                    "Essa cédula/moeda não existe no caixa.");
+                    "Essa cedula/moeda não existe no caixa.");
 
             if (cedula.Quantidade < quantidade)
                 throw new InvalidOperationException(
@@ -81,10 +83,9 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             RegistrarOperacao($"Descarga: {quantidade} unidade(s) de {valor.ToString("C2", _cultura)}; total: {(valor * quantidade).ToString("C2", _cultura)}; saldo: {ValorTotal.ToString("C2", _cultura)}.");
         }
 
-        public void TrocarEstrategia(EstrategiaSaque estrategia)
+        public void TrocarEstrategia(IEstrategiaSaque estrategia)
         {
-            if (!Enum.IsDefined(estrategia))
-                throw new ArgumentOutOfRangeException(nameof(estrategia), "Estratégia de saque inválida.");
+            ArgumentNullException.ThrowIfNull(estrategia);
 
             Estrategia = estrategia;
         }
@@ -122,7 +123,7 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
             if (!ValidarSaque(valorSaque))
                 return;
 
-            var composicao = ComporNotas(
+            var composicao = Estrategia.ComporNotas(
                 valorSaque, _cedulas);
 
             if (composicao == null)
@@ -161,13 +162,13 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
 
         private void ExibirSugestaoSaque(decimal valorSaque)
         {
-            var sugestao = ComporNotas(
+            var sugestao = Estrategia.ComporNotas(
                 valorSaque, _cedulas,
                 permitirValorMenor: true);
 
             if (sugestao == null)
             {
-                Console.WriteLine("Não há um valor menor disponível para sugerir.");
+                Console.WriteLine("Não há um valor menor disponável para sugerir.");
                 return;
             }
 
@@ -201,77 +202,6 @@ namespace Teste_tecnico_Sistema_de_caixa_eletronico.Services
         }
        
 
-        private Dictionary<long, long>? ComporNotas(
-            decimal valor, List<CedulaMoeda> cedulas,
-            bool permitirValorMenor = false)
-        {
-            ArgumentNullException.ThrowIfNull(cedulas);
-
-            long valorSaque = checked((long) valor);
-            long tamanho = valorSaque + 1;
-            var combinacoes = new Dictionary<long, long>?[tamanho];
-            long[] totalNotas = new long[tamanho];
-
-            combinacoes[0] = new Dictionary<long, long>();
-
-            foreach(var cedula in cedulas.OrderBy(c => c.Valor))
-            {
-                long valorNota = checked((long)cedula.Valor);
-
-                for (long valorAtual = valorSaque; valorAtual >= 0; valorAtual--) 
-                {
-                    var combinacaoAtual = combinacoes[valorAtual];
-                    if (combinacaoAtual == null) continue;
-
-                    long valorRestante = valorSaque - valorAtual;
-                    long quantidadeQueCabe = valorRestante / valorNota;
-                    long quantidadeMaxima = Math.Min(cedula.Quantidade, quantidadeQueCabe);
-
-                    for(long quantidade = 1; quantidade <= quantidadeMaxima; quantidade++)
-                    {
-                        long novoValor = valorAtual + valorNota * quantidade; ;
-                        long novaQuantidadeNotas = totalNotas[valorAtual] + quantidade;
-
-                        bool guardarCombinacao;
-
-                        if (combinacoes[novoValor] == null)
-                        {
-                            guardarCombinacao = true; // é a primeira solução para esse valor
-
-                        } 
-                        else if (Estrategia == EstrategiaSaque.PreservarMaioresValores)
-                        {
-                            guardarCombinacao = false; // a solução anterior usa menos notas maior valor
-                        }
-                        else
-                        {
-                            guardarCombinacao = novaQuantidadeNotas < totalNotas[novoValor];
-                        }
-
-                        if (guardarCombinacao)
-                        {
-                            var novaCombinacao = new Dictionary<long, long>(combinacaoAtual);
-                            long quantidadeAnterior = novaCombinacao.GetValueOrDefault(valorNota);
-                            novaCombinacao[valorNota] = quantidadeAnterior + quantidade;
-
-                            combinacoes[novoValor] = novaCombinacao;
-                            totalNotas[novoValor] = novaQuantidadeNotas;
-                        }
-                    }
-                }
-            }
-    
-            if (combinacoes[valorSaque] != null || !permitirValorMenor)
-                return combinacoes[valorSaque];
-
-            // As combinações já foram calculadas. Procuramos a maior abaixo do saque.
-            for (long valorMenor = valorSaque - 1; valorMenor > 0; valorMenor--)
-            {
-                if (combinacoes[valorMenor] != null)
-                    return combinacoes[valorMenor];
-            }
-
-            return null;
-        }
     }
 }
+
